@@ -6,10 +6,14 @@ const createTransporter = () => {
   // Remove spaces from password (Gmail App Password format)
   const smtpPass = process.env.SMTP_PASS ? process.env.SMTP_PASS.replace(/\s+/g, '') : '';
   
-  return nodemailer.createTransport({
+  // Use port 465 with SSL for better cloud platform compatibility
+  const port = parseInt(process.env.SMTP_PORT) || 465;
+  const secure = port === 465; // true for 465, false for other ports
+  
+  return nodemailer.createTransporter({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT) || 587,
-    secure: process.env.SMTP_SECURE === 'true', // false for TLS
+    port: port,
+    secure: secure, // Use SSL for port 465
     auth: {
       user: process.env.SMTP_USER,
       pass: smtpPass
@@ -17,8 +21,11 @@ const createTransporter = () => {
     tls: {
       rejectUnauthorized: false // Allow self-signed certificates
     },
-    debug: process.env.NODE_ENV === 'development', // Enable debug output
-    logger: process.env.NODE_ENV === 'development' // Enable logging
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
+    debug: process.env.NODE_ENV === 'development',
+    logger: process.env.NODE_ENV === 'development'
   });
 };
 
