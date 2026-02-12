@@ -3,14 +3,22 @@ const logger = require('../config/logger');
 
 // Create transporter
 const createTransporter = () => {
+  // Remove spaces from password (Gmail App Password format)
+  const smtpPass = process.env.SMTP_PASS ? process.env.SMTP_PASS.replace(/\s+/g, '') : '';
+  
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: process.env.SMTP_PORT || 587,
-    secure: process.env.SMTP_SECURE === 'true',
+    port: parseInt(process.env.SMTP_PORT) || 587,
+    secure: process.env.SMTP_SECURE === 'true', // false for TLS
     auth: {
       user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS
-    }
+      pass: smtpPass
+    },
+    tls: {
+      rejectUnauthorized: false // Allow self-signed certificates
+    },
+    debug: process.env.NODE_ENV === 'development', // Enable debug output
+    logger: process.env.NODE_ENV === 'development' // Enable logging
   });
 };
 
