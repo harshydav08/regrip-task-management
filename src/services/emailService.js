@@ -10,7 +10,7 @@ const createTransporter = () => {
   const port = parseInt(process.env.SMTP_PORT) || 465;
   const secure = port === 465; // true for 465, false for other ports
   
-  return nodemailer.createTransporter({
+  return nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: port,
     secure: secure, // Use SSL for port 465
