@@ -12,8 +12,9 @@ const startServer = async () => {
     await sequelize.authenticate();
     logger.info('Database connection established successfully.');
 
-    // Sync models (use migrations in production)
-    if (process.env.NODE_ENV === 'development') {
+    // Sync models - Auto-create tables
+    // In production: Set FORCE_DB_SYNC=true for first deployment, then remove it
+    if (process.env.NODE_ENV === 'development' || process.env.FORCE_DB_SYNC === 'true') {
       await sequelize.sync({ alter: true });
       logger.info('Database models synchronized.');
     }
