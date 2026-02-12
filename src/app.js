@@ -10,6 +10,9 @@ const { apiLimiter } = require('./middlewares/rateLimiter');
 
 const app = express();
 
+// Trust proxy - Required for Render, Heroku, Railway, etc.
+app.set('trust proxy', 1);
+
 // Security middleware with relaxed CSP for inline scripts
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
