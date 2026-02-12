@@ -79,8 +79,13 @@ const sendOtpEmail = async (email, otp) => {
     logger.info(`OTP email sent to ${email}`);
     return true;
   } catch (error) {
-    logger.error(`Failed to send OTP email to ${email}:`, error);
-    throw new Error('Failed to send OTP email');
+    logger.error(`Failed to send OTP email to ${email}:`, {
+      message: error.message,
+      code: error.code,
+      response: error.response,
+      stack: error.stack
+    });
+    throw error; // Throw original error for better debugging
   }
 };
 

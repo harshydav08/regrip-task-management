@@ -34,15 +34,25 @@ const requestOtp = async (email, req) => {
   // Generate and store OTP
   const otp = await otpService.createOtp(user.id);
   
-  // Send OTP via email
-  await emailService.sendOtpEmail(email, otp);
+  // Try to send OTP via email (non-blocking for debugging)
+  let emailSent = false;
+  let emailError = null;
+  try {
+    await emailService.sendOtpEmail(email, otp);
+    emailSent = true;
+  } catch (error) {
+    emailError = error.message;
+    console.error('Email sending failed:', error);
+    // Continue anyway - OTP is in database
+  }
   
   // Log the event
   await logService.logAuthEvent(user.id, logService.ACTIONS.OTP_REQUEST, req);
   
   return {
-    message: 'OTP sent successfully to your email',
-    email: email
+    message: emailSent ? 'OTP sent successfully to your email' : `OTP generated but email failed. ${emailError}. Check your email configuration.`,
+    email: email,
+    ...(process.env.NODE_ENV === 'development' && { otp, emailError }) // Show OTP in dev mode
   };
 };
 
