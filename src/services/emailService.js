@@ -1,5 +1,4 @@
 const nodemailer = require('nodemailer');
-const sgMail = require('@sendgrid/mail');
 const logger = require('../config/logger');
 
 // Create transporter
@@ -28,25 +27,6 @@ const createTransporter = () => {
     debug: process.env.NODE_ENV === 'development',
     logger: process.env.NODE_ENV === 'development'
   });
-};
-
-const sendWithSendGrid = async (mailOptions) => {
-  const apiKey = process.env.SENDGRID_API_KEY;
-  if (!apiKey) {
-    return false;
-  }
-
-  sgMail.setApiKey(apiKey);
-
-  await sgMail.send({
-    to: mailOptions.to,
-    from: mailOptions.from,
-    subject: mailOptions.subject,
-    text: mailOptions.text,
-    html: mailOptions.html
-  });
-
-  return true;
 };
 
 /**
@@ -100,12 +80,8 @@ const sendOtpEmail = async (email, otp) => {
       text: `Your OTP for Task Management System is: ${otp}. This OTP will expire in 10 minutes. Do not share this with anyone.`
     };
 
-    if (process.env.SENDGRID_API_KEY) {
-      await sendWithSendGrid(mailOptions);
-    } else {
-      const transporter = createTransporter();
-      await transporter.sendMail(mailOptions);
-    }
+    const transporter = createTransporter();
+    await transporter.sendMail(mailOptions);
     logger.info(`OTP email sent to ${email}`);
     return true;
   } catch (error) {
