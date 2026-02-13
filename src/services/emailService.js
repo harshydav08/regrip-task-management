@@ -1,32 +1,52 @@
 const nodemailer = require('nodemailer');
+const sgMail = require('@sendgrid/mail');
 const logger = require('../config/logger');
 
 // Create transporter
 const createTransporter = () => {
-  // Remove spaces from password (Gmail App Password format)
-  const smtpPass = process.env.SMTP_PASS ? process.env.SMTP_PASS.replace(/\s+/g, '') : '';
+  // Brevo SMTP configuration
+  const smtpPass = process.env.SMTP_PASS ? process.env.SMTP_PASS.trim() : '';
   
-  // Use port 465 with SSL for better cloud platform compatibility
-  const port = parseInt(process.env.SMTP_PORT) || 465;
-  const secure = port === 465; // true for 465, false for other ports
+  // Brevo uses port 587 with TLS
+  const port = parseInt(process.env.SMTP_PORT) || 587;
+  const secure = port === 465; // false for port 587 (TLS), true for port 465 (SSL)
   
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
     port: port,
-    secure: secure, // Use SSL for port 465
+    secure: secure,
     auth: {
       user: process.env.SMTP_USER,
       pass: smtpPass
     },
     tls: {
-      rejectUnauthorized: false // Allow self-signed certificates
+      rejectUnauthorized: false
     },
-    connectionTimeout: 10000, // 10 seconds
+    connectionTimeout: 10000,
     greetingTimeout: 10000,
     socketTimeout: 10000,
     debug: process.env.NODE_ENV === 'development',
     logger: process.env.NODE_ENV === 'development'
   });
+};
+
+const sendWithSendGrid = async (mailOptions) => {
+  const apiKey = process.env.SENDGRID_API_KEY;
+  if (!apiKey) {
+    return false;
+  }
+
+  sgMail.setApiKey(apiKey);
+
+  await sgMail.send({
+    to: mailOptions.to,
+    from: mailOptions.from,
+    subject: mailOptions.subject,
+    text: mailOptions.text,
+    html: mailOptions.html
+  });
+
+  return true;
 };
 
 /**
@@ -37,8 +57,6 @@ const createTransporter = () => {
  */
 const sendOtpEmail = async (email, otp) => {
   try {
-    const transporter = createTransporter();
-
     const mailOptions = {
       from: `"Task Manager" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
       to: email,
@@ -82,7 +100,12 @@ const sendOtpEmail = async (email, otp) => {
       text: `Your OTP for Task Management System is: ${otp}. This OTP will expire in 10 minutes. Do not share this with anyone.`
     };
 
-    await transporter.sendMail(mailOptions);
+    if (process.env.SENDGRID_API_KEY) {
+      await sendWithSendGrid(mailOptions);
+    } else {
+      const transporter = createTransporter();
+      await transporter.sendMail(mailOptions);
+    }
     logger.info(`OTP email sent to ${email}`);
     return true;
   } catch (error) {
