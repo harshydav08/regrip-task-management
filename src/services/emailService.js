@@ -1,47 +1,33 @@
-const nodemailer = require('nodemailer');
 const logger = require('../config/logger');
 
-// Create transporter
-const createTransporter = () => {
-  // Brevo SMTP configuration
-  const smtpPass = process.env.SMTP_PASS ? process.env.SMTP_PASS.trim() : '';
-  
-  // Brevo uses port 587 with TLS
-  const port = parseInt(process.env.SMTP_PORT) || 587;
-  const secure = port === 465; // false for port 587 (TLS), true for port 465 (SSL)
-  
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
-    port: port,
-    secure: secure,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: smtpPass
-    },
-    tls: {
-      rejectUnauthorized: false
-    },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 10000,
-    debug: process.env.NODE_ENV === 'development',
-    logger: process.env.NODE_ENV === 'development'
-  });
-};
-
 /**
- * Send OTP email to user
+ * Send OTP email using Brevo REST API (HTTPS - works on Render)
  * @param {string} email - Recipient email
  * @param {string} otp - OTP code
  * @returns {Promise<boolean>}
  */
 const sendOtpEmail = async (email, otp) => {
   try {
-    const mailOptions = {
-      from: `"Task Manager" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
-      to: email,
+    const apiKey = process.env.SMTP_PASS ? process.env.SMTP_PASS.trim() : '';
+    const senderEmail = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@taskmanager.com';
+
+    if (!apiKey) {
+      throw new Error('SMTP_PASS (Brevo API key) is not configured');
+    }
+
+    const emailContent = {
+      sender: {
+        name: 'Task Manager',
+        email: senderEmail
+      },
+      to: [
+        {
+          email: email,
+          name: email.split('@')[0]
+        }
+      ],
       subject: 'Your Login OTP - Task Management System',
-      html: `
+      htmlContent: `
         <!DOCTYPE html>
         <html>
         <head>
@@ -77,21 +63,34 @@ const sendOtpEmail = async (email, otp) => {
         </body>
         </html>
       `,
-      text: `Your OTP for Task Management System is: ${otp}. This OTP will expire in 10 minutes. Do not share this with anyone.`
+      textContent: `Your OTP for Task Management System is: ${otp}. This OTP will expire in 10 minutes. Do not share this with anyone.`
     };
 
-    const transporter = createTransporter();
-    await transporter.sendMail(mailOptions);
-    logger.info(`OTP email sent to ${email}`);
+    // Use Brevo REST API instead of SMTP (HTTPS works on Render, SMTP ports are blocked)
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'api-key': apiKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(emailContent)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      throw new Error(`Brevo API error (${response.status}): ${errorData}`);
+    }
+
+    const result = await response.json();
+    logger.info(`OTP email sent to ${email}`, { messageId: result.messageId });
     return true;
   } catch (error) {
     logger.error(`Failed to send OTP email to ${email}:`, {
       message: error.message,
-      code: error.code,
-      response: error.response,
       stack: error.stack
     });
-    throw error; // Throw original error for better debugging
+    throw error;
   }
 };
 
