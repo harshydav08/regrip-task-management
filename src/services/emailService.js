@@ -83,7 +83,10 @@ const sendOtpEmail = async (email, otp) => {
     }
 
     const result = await response.json();
-    logger.info(`OTP email sent to ${email}`, { messageId: result.messageId });
+    logger.info(`OTP email sent to ${email} - Message ID: ${result.messageId}`, { 
+      messageId: result.messageId,
+      response: JSON.stringify(result)
+    });
     return true;
   } catch (error) {
     logger.error(`Failed to send OTP email to ${email}:`, {
