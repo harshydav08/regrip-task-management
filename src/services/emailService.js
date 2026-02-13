@@ -9,7 +9,7 @@ const logger = require('../config/logger');
 const sendOtpEmail = async (email, otp) => {
   try {
     const apiKey = process.env.SMTP_PASS ? process.env.SMTP_PASS.trim() : '';
-    const senderEmail = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@taskmanager.com';
+    const senderEmail = process.env.SMTP_USER || 'a247ad001@smtp-brevo.com'; // Use SMTP_USER (verified Brevo sender)
 
     if (!apiKey) {
       throw new Error('SMTP_PASS (Brevo API key) is not configured');
